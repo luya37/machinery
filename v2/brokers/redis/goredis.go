@@ -55,7 +55,6 @@ func NewGR(cnf *config.Config, addrs []string, db int) iface.Broker {
 	}
 	if cnf.Redis != nil {
 		ropt.MasterName = cnf.Redis.MasterName
-		ropt.SentinelPassword = password
 	}
 
 	if cnf.Redis != nil && cnf.Redis.SentinelPassword != "" {
