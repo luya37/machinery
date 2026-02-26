@@ -45,9 +45,10 @@ func NewGR(cnf *config.Config, addrs []string, db int) iface.Backend {
 	}
 
 	ropt := &redis.UniversalOptions{
-		Addrs:    addrs,
-		DB:       db,
-		Password: b.password,
+		Addrs:     addrs,
+		DB:        db,
+		Password:  b.password,
+		TLSConfig: cnf.TLSConfig,
 	}
 	if cnf.Redis != nil {
 		ropt.MasterName = cnf.Redis.MasterName
