@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -302,12 +304,39 @@ func (b *BackendGR) updateState(taskState *tasks.TaskState) error {
 	}
 
 	expiration := b.getExpiration()
+	startedAt := time.Now()
 	_, err = b.rclient.Set(context.Background(), taskState.TaskUUID, encoded, expiration).Result()
 	if err != nil {
+		pingStartedAt := time.Now()
+		_, pingErr := b.rclient.Ping(context.Background()).Result()
+		log.ERROR.Printf(
+			"[Redis BackendGR] updateState failed task_uuid=%s state=%s timeout=%v set_elapsed_ms=%d ping_elapsed_ms=%d err=%v ping_err=%v",
+			taskState.TaskUUID,
+			taskState.State,
+			isRedisTimeoutErr(err),
+			time.Since(startedAt).Milliseconds(),
+			time.Since(pingStartedAt).Milliseconds(),
+			err,
+			pingErr,
+		)
 		return err
 	}
 
 	return nil
+}
+
+func isRedisTimeoutErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "timeout")
 }
 
 // getExpiration returns expiration for a stored task state
